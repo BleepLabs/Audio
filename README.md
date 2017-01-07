@@ -1,53 +1,17 @@
-Teensy Audio Library
-====================
+Some additions to Pauls incredible teesny audio library that I created fro the THingamagoop 300 and other projects. 
 
-16 bit, 44.1 kHz streaming audio library for Teensy 3.x, featuring:
+Additions:
+FM input in waveform synth
+bandlimited wavefroms see the Thingamagoop 3000 code for usage . https://github.com/BleepLabs/Thingamagoop-3000/blob/f677f54a9b7510a64d8e80f4b67bba2a56f2a077/t3k_v15/t3k_v15.ino#L994 & https://github.com/BleepLabs/Thingamagoop-3000/blob/f677f54a9b7510a64d8e80f4b67bba2a56f2a077/t3k_v15/modes.ino#L32
+Digital combine - For simple digital distortion
+Varible delay - Interpolated delay time gives tape like response. 
+Sample and Hold - Allows for smooth bitcrusing at arbirtarty rates and classic s&h sounds
+Granular effect - Simple shifting and freezing
 
-* Polyphonic Playback
-* Recording
-* Synthesis
-* Analysis
-* Effects
-* Filtering
-* Mixing
-* Multiple Simultaneous Inputs & Outputs
-* Flexible signal routing between library objects
-* Automatic Streaming while your Arduino sketch runs
+http://bleeplabs.com/store/thingamagoop-3000/
 
-Main Audio Library Page
------------------------
 
 http://www.pjrc.com/teensy/td_libs_Audio.html
-
-
-Audio System Design Tool
-------------------------
-
-Use this graphical tool to design your audio project.  Easily browse the library's many features, connect objects, export to Arduino code, and quickly access details for the functions each object provides for you to control it from your Arduino sketch!
-
-http://www.pjrc.com/teensy/gui/
-
-
-Supported Hardware
-------------------
-
-[Audio Adaptor Board](http://www.pjrc.com/store/teensy3_audio.html) for 16 bit stereo input and output.
-
-![Inputs](/gui/img/audioshield_inputs.jpg)      ![Outputs](/gui/img/audioshield_outputs.jpg)
-
-[Teensy 3.1](http://www.pjrc.com/store/teensy31.html) 12 bit DAC
-
-![DAC Output](/gui/img/dacpin.jpg)
-
-[Teensy 3.1](http://www.pjrc.com/store/teensy31.html) or [3.0](http://www.pjrc.com/store/teensy3.html) ADC Input
-
-![ADC Input](/gui/img/adccircuit.png)
-
-[Teensy 3.1](http://www.pjrc.com/store/teensy31.html) or [3.0](http://www.pjrc.com/store/teensy3.html) PWM Output
-
-![PWM Output](/gui/img/pwmdualcircuit.jpg)
-
-
 
 
 
