@@ -7,6 +7,8 @@ Bandlimited waveforms see the Thingamagoop 3000 code for usage . https://github.
 
 Digital combine - For simple digital distortion<br>
 
+Laxy mixer setup -  "mixer1.gain(.25,.25,.25.25)" and "mixer1.gain(.25)" can be used to setup all inputs to .25
+
 Varible delay - Interpolated delay time gives tape like response. <br>
 
 Sample and Hold - Allows for smooth bitcrushing at arbirtarty rates and classic s&h modulators.<br>
