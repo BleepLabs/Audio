@@ -9,9 +9,9 @@ Digital combine - For simple digital distortion<br>
 
 Varible delay - Interpolated delay time gives tape like response. <br>
 
-Sample and Hold - Allows for smooth bitcrusing at arbirtarty rates and classic s&h sounds<br>
+Sample and Hold - Allows for smooth bitcrushing at arbirtarty rates and classic s&h modulators.<br>
 
-Granular effect - Simple shifting and freezing<br>
+Granular effect - Simple pitch shifting  and freezing<br>
 
 <br>
 http://bleeplabs.com/store/thingamagoop-3000/
