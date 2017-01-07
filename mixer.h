@@ -43,6 +43,15 @@ public:
 		else if (gain < 0.0f) gain = 0.0f;
 		multiplier[channel] = gain * 65536.0f; // TODO: proper roundoff?
 	}
+
+	void gain(float gain0,float gain1,float gain2,float gain3) {   //lazy gain
+		gain(0,gain0);
+		gain(1,gain1);
+		gain(2,gain2);
+		gain(3,gain3);
+	}
+
+
 private:
 	int32_t multiplier[4];
 	audio_block_t *inputQueueArray[4];
