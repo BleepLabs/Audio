@@ -50,6 +50,13 @@ public:
 		gain(2,gain2);
 		gain(3,gain3);
 	}
+	
+		void gain(float gainall) {
+		gain(0,gainall);
+		gain(1,gainall);
+		gain(2,gainall);
+		gain(3,gainall);
+	}
 
 
 private:
