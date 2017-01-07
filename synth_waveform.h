@@ -56,18 +56,21 @@ class AudioSynthWaveform :
 public AudioStream
 {
 public:
-  AudioSynthWaveform(void) : 
-  AudioStream(0,NULL), tone_amp(0), tone_freq(0),
+  AudioSynthWaveform(void) : AudioStream(1, inputQueueArray) {}
+ // AudioStream(0, NULL),
+  /*
+  tone_amp(0), tone_freq(0),
   tone_phase(0), tone_width(0.25), tone_incr(0), tone_type(0),
   tone_offset(0), arbdata(NULL)
   { 
   }
-  
+  */
   void frequency(float t_freq) {
     if (t_freq < 0.0) t_freq = 0.0;
     else if (t_freq > AUDIO_SAMPLE_RATE_EXACT / 2) t_freq = AUDIO_SAMPLE_RATE_EXACT / 2;
     tone_incr = (t_freq * (0x80000000LL/AUDIO_SAMPLE_RATE_EXACT)) + 0.5;
   }
+
   void phase(float angle) {
     if (angle < 0.0) angle = 0.0;
     else if (angle > 360.0) {
@@ -76,6 +79,7 @@ public:
     }
     tone_phase = angle * (2147483648.0 / 360.0);
   }
+
   void amplitude(float n) {        // 0 to 1.0
     if (n < 0) n = 0;
     else if (n > 1.0) n = 1.0;
@@ -99,16 +103,24 @@ public:
     // pulse width is stored as the equivalent phase
   }
   void begin(short t_type) {
-	tone_phase = 0;
-	tone_type = t_type;
+  tone_phase = 0;
+  tone_type = t_type;
   }
   void begin(float t_amp, float t_freq, short t_type) {
-	amplitude(t_amp);
-	frequency(t_freq);
-	begin(t_type);
+  amplitude(t_amp);
+  frequency(t_freq);
+  begin(t_type);
   }
   void arbitraryWaveform(const int16_t *data, float maxFreq) {
-	arbdata = data;
+  arbdata = data;
+  arb_len=255;
+  }
+    void arbitraryWaveform(const int16_t *data, float maxFreq,uint16_t len_def) {
+  arbdata = data;
+  if (len_def>2047){
+    len_def=2047;
+  }
+  arb_len=len_def;
   }
   virtual void update(void);
   
@@ -117,11 +129,17 @@ private:
   short    tone_freq;
   uint32_t tone_phase;
   uint32_t tone_width;
+  uint16_t arb_len;
+    int32_t prev0;
+  int32_t mod, pmod, sync1111, psync;
+
   // volatile prevents the compiler optimizing out the frequency function
   volatile uint32_t tone_incr;
   short    tone_type;
   int16_t  tone_offset;
   const int16_t *arbdata;
+    audio_block_t *inputQueueArray[1];
+
 };
 
 
