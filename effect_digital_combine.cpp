@@ -28,7 +28,6 @@
 
 void AudioEffectDigitalCombine::update(void)
 {
-#if defined(KINETISK)
 	audio_block_t *blocka, *blockb;
 	uint32_t *pa, *pb, *end;
 	uint32_t a12, a34; //, a56, a78;
@@ -47,25 +46,25 @@ void AudioEffectDigitalCombine::update(void)
 	pa = (uint32_t *)(blocka->data);
 	pb = (uint32_t *)(blockb->data);
 	end = pa + AUDIO_BLOCK_SAMPLES/2;
+
 	while (pa < end) {
 		a12 = *pa;
+		a34 = *(pa+1);
+
 		b12 = *pb++;
+		b34 = *pb++;
 	
 		a12 = a12 | b12;
+
+		a34 = a34 | b34;
 		*pa++ = a12;
+     	*pa++ = a34;
 
 	}
+
 	transmit(blocka);
 	release(blocka);
 	release(blockb);
 
-#elif defined(KINETISL)
-	audio_block_t *block;
-
-	block = receiveReadOnly(0);
-	if (block) release(block);
-	block = receiveReadOnly(1);
-	if (block) release(block);
-#endif
 }
 
