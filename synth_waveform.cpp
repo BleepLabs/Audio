@@ -263,6 +263,67 @@ void AudioSynthWaveform::update(void)
         }
         break;
 
+
+      case WAVEFORM_VARIABLE_TRIANGLE:
+
+        static int32_t pindex;
+        if (fm_input) {
+
+          for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
+            // Calculate interpolated sin
+            index = tone_phase >> 23;
+            
+            if (index < knee) {
+              vtout = ((index * waveamp) / knee) -waveamp/2;
+            }
+            if (index>= knee) {
+              vtout = ((((index - knee) * waveamp) / (wavelength - knee)) * -1)+waveamp/2;
+              //vtout = 0;
+
+            }
+            val1 = vtout;
+
+            *bp++ = (short)((val1 * tone_amp) >> 15);
+
+            // phase and incr are both unsigned 32-bit fractions
+            mod = fm_input->data[i];
+            tone_phase += tone_incr + (multiply_32x32_rshift32(tone_incr, mod << 16) << 1);
+            //tone_phase += tone_incr;
+            // If tone_phase has overflowed, truncate the top bit
+            if (tone_phase & 0x80000000)tone_phase &= 0x7fffffff;
+          }   
+           release(fm_input);
+
+        }
+
+        else {
+
+          for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
+            // Calculate interpolated sin
+            index = tone_phase >> 23;
+
+            if (index < knee) {
+              vtout = ((index * waveamp) / knee) -waveamp/2;
+            }
+            if (index>= knee) {
+              vtout = ((((index - knee) * waveamp) / (wavelength - knee)) * -1)+waveamp/2;
+              //vtout = 0;
+
+            }
+            val1 = vtout;
+
+            *bp++ = (short)((val1 * tone_amp) >> 15);
+
+            // phase and incr are both unsigned 32-bit fractions
+            tone_phase += tone_incr;
+            // If tone_phase has overflowed, truncate the top bit
+            if (tone_phase & 0x80000000)tone_phase &= 0x7fffffff;
+          }    //release(fm_input);
+
+        }
+
+        break;
+
       case WAVEFORM_TRIANGLE:
 
         if (fm_input) {
@@ -322,8 +383,6 @@ void AudioSynthWaveform::update(void)
 
       case WAVEFORM_PULSE:
         if (fm_input) {
-          //Serial.print(" yy ");
-
           for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
             if (tone_phase < tone_width)*bp++ = -tone_amp;
             else *bp++ = tone_amp;
@@ -362,6 +421,5 @@ void AudioSynthWaveform::update(void)
     release(block);
   }
 }
-
 
 
