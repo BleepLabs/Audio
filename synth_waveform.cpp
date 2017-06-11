@@ -34,7 +34,7 @@
 //        faster than arm's sin function
 // PAH 140316 - fix calculation of sample (amplitude error)
 // PAH 140314 - change t_hi from int to float
-
+ 
 
 void AudioSynthWaveform::update(void)
 {
