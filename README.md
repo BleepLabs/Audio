@@ -13,9 +13,15 @@ Lazy mixer setup -  "mixer1.gain(.25,.25,.25.25)" and "mixer1.gain(.25)" can be 
 
 Variable delay - Interpolated delay time gives tape like response. <br>
 
-Sample and Hold - Allows for smooth bitcrushing at arbirtarty rates and classic s&h modulators.<br>
+Sample and Hold - Allows for smooth bitcrushing at arbitrary rates and classic s&h modulators.<br>
 
 Granular effect - Simple pitch shifting  and freezing<br>
+
+Arbitrary wavetable voice length<br>
+
+Variable triangle wave. WAVEFORM_VARIABLE_TRIANGLE <br>
+waveform1.varible_triangle(0); would be sawtooton<br>
+waveform1.varible_triangle(.7); would be halfway between a regular triangle ware and a ramp<br>
 
 <br>
 http://bleeplabs.com/store/thingamagoop-3000/
