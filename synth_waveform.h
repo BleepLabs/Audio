@@ -45,7 +45,7 @@ extern const int16_t AudioWaveformSine[257];
 #define WAVEFORM_TRIANGLE  3
 #define WAVEFORM_ARBITRARY 4
 #define WAVEFORM_PULSE     5
-
+#define WAVEFORM_VARIABLE_TRIANGLE 6
 // todo: remove these...
 #define TONE_TYPE_SINE     0
 #define TONE_TYPE_SAWTOOTH 1
@@ -96,6 +96,19 @@ public:
     else if (n > 1.0) n = 1.0;
     tone_offset = n * 32767.0;
   }
+
+  void varible_triangle(float n) {
+    if (n<0){
+      n=0;
+    }
+    if (n>256){
+      n=256;
+    }
+
+    knee=n * 256.00;
+  }
+
+
   void pulseWidth(float n) {          // 0.0 to 1.0
     if (n < 0) n = 0;
     else if (n > 1.0) n = 1.0;
@@ -130,9 +143,12 @@ private:
   uint32_t tone_phase;
   uint32_t tone_width;
   uint16_t arb_len;
-    int32_t prev0;
+  uint16_t knee;
+  int32_t prev0;
   int32_t mod, pmod, sync1111, psync;
-
+  int32_t vtout;
+         int32_t waveamp = 65536;
+         int32_t wavelength = 256;
   // volatile prevents the compiler optimizing out the frequency function
   volatile uint32_t tone_incr;
   short    tone_type;
