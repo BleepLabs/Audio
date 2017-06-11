@@ -20,8 +20,8 @@ Granular effect - Simple pitch shifting  and freezing<br>
 Arbitrary wavetable voice length<br>
 
 Variable triangle wave. WAVEFORM_VARIABLE_TRIANGLE <br>
-waveform1.varible_triangle(0); would be sawtooton<br>
-waveform1.varible_triangle(.7); would be halfway between a regular triangle ware and a ramp<br>
+waveform1.varible_triangle(0); would be a saw<br>
+waveform1.varible_triangle(.7); would be halfway between a regular triangle and a ramp<br>
 
 <br>
 http://bleeplabs.com/store/thingamagoop-3000/
