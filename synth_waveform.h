@@ -1,337 +1,144 @@
+#ifndef synth_waveform_h_
+#define synth_waveform_h_
 
-#include "synth_waveform.h"
+#include "AudioStream.h"
 #include "arm_math.h"
-#include "utility/dspinst.h"
-#include "Arduino.h"
 
-
-void AudioSynthWaveform::update(void)
-{
-  audio_block_t *block, *fm_input;
-  short *bp, *end;
-  int32_t val1, val2, val3;
-  uint32_t index, index2, scale;
-  int16_t mod;
-
-  // temporaries for TRIANGLE
-  uint32_t mag;
-  short tmp_amp;
-
-  fm_input = receiveReadOnly(0);
-
-
-  if (tone_amp == 0) return;
-  block = allocate();
-  if (block) {
-    bp = block->data;
-    switch (tone_type) {
-
-    case WAVEFORM_SINE:
-
-
-
-      for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
-        // Calculate interpolated sin
-        index = tone_phase >> 23;
-        val1 = AudioWaveformSine[index];
-        val2 = AudioWaveformSine[index + 1];
-        scale = (tone_phase >> 7) & 0xFFFF;
-        val2 *= scale;
-        val1 *= 0xFFFF - scale;
-        val3 = (val1 + val2) >> 16;
-        *bp++ = (short)((val3 * tone_amp) >> 15);
-
-        // phase and incr are both unsigned 32-bit fractions
-        if (fm_input) {
-          mod = fm_input->data[i];
-          tone_phase += tone_incr + (multiply_32x32_rshift32(tone_incr, mod << 16) << 1);
-        }
-        else {
-          tone_phase += tone_incr;
-        }
-        //tone_phase += tone_incr;
-        // If tone_phase has overflowed, truncate the top bit
-        if (tone_phase & 0x80000000)tone_phase &= 0x7fffffff;
-      }
-
-      if (fm_input) {
-        release(fm_input);
-      }
-
-
-      break;
-
-    case WAVEFORM_ARBITRARY:
-
-
-      if (!arbdata) {
-        release(block);
-        if (fm_input) {
-          release(fm_input);
-        }
-        return;
-      }
-
-      for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
-        if (arb_len > 255)
-        {
-          index = tone_phase >> 20; //2048 max
-          if (index > arb_len) {
-            index = 0;
-            tone_phase = 0;
-          }
-          //index %=arb_len-1;
-          val1 = *(arbdata + index);
-          int16_t ind2 = (index + 1);
-          if (ind2 > arb_len - 1)
-          {
-            ind2 = 0;
-          }
-          val2 = *(arbdata + ind2);
-          scale = (tone_phase >> 7) & 0xFFFF;
-          val2 *= scale;
-          val1 *= 0xFFFF - scale;
-          val3 = (val1 + val2) >> 16;
-          *bp++ = (short)((val3 * tone_amp) >> 15);
-          if (fm_input) {
-            mod = fm_input->data[i];
-            tone_phase += tone_incr + (multiply_32x32_rshift32(tone_incr, mod << 16) << 1);
-          }
-          else {
-            tone_phase += tone_incr;
-          }
-
-          tone_phase &= 0x7fffffff;
-        }
-
-        if (arb_len == 255)
-        {
-          index = tone_phase >> 23;
-          val1 = *(arbdata + index);
-          val2 = *(arbdata + ((index + 1) & 255));
-          scale = (tone_phase >> 7) & 0xFFFF;
-          val2 *= scale;
-          val1 *= 0xFFFF - scale;
-          val3 = (val1 + val2) >> 16;
-          *bp++ = (short)((val3 * tone_amp) >> 15);
-
-          if (fm_input) {
-            mod = fm_input->data[i];
-            tone_phase += tone_incr + (multiply_32x32_rshift32(tone_incr, mod << 16) << 1);
-          }
-          else {
-            tone_phase += tone_incr;
-          }
-          //tone_phase += tone_incr;
-          tone_phase &= 0x7fffffff;
-        }
-      }
-
-      if (fm_input) {
-        release(fm_input);
-      }
-
-
-      break;
-
-    case WAVEFORM_SQUARE:
-
-
-
-      for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
-        if (tone_phase & 0x40000000)*bp++ = -tone_amp;
-        else *bp++ = tone_amp;
-        if (fm_input) {
-          mod = fm_input->data[i];
-          tone_phase += tone_incr + (multiply_32x32_rshift32(tone_incr, mod << 16) << 1);
-        }
-        else {
-          tone_phase += tone_incr;
-        }
-        // If tone_phase has overflowed, truncate the top bit
-        if (tone_phase & 0x80000000)tone_phase &= 0x7fffffff;
-      }
-
-
-      if (fm_input) {
-        release(fm_input);
-      }
-
-      break;
-
-    case WAVEFORM_SAWTOOTH:
-
-
-      for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
-        *bp++ = ((short)(tone_phase >> 15) * tone_amp) >> 15;
-        // phase and incr are both unsigned 32-bit fractions
-        tone_phase += tone_incr;
-        if (fm_input) {
-          mod = fm_input->data[i];
-          tone_phase += tone_incr + (multiply_32x32_rshift32(tone_incr, mod << 16) << 1);
-        }
-        else {
-          tone_phase += tone_incr;
-        }
-        //tone_phase += tone_incr;
-        // If tone_phase has overflowed, truncate the top bit
-        if (tone_phase & 0x80000000)tone_phase &= 0x7fffffff;
-      }
-
-      if (fm_input) {
-        release(fm_input);
-      }
-
-    case WAVEFORM_SAWTOOTH_REVERSE:
-      for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
-        *bp++ = ((short)(tone_phase >> 15) * tone_amp) >> 15;
-        // phase and incr are both unsigned 32-bit fractions
-        if (fm_input) {
-          mod = fm_input->data[i];
-          tone_phase -= tone_incr + (multiply_32x32_rshift32(tone_incr, mod << 16) << 1);
-        }
-        else {
-          tone_phase -= tone_incr;
-        }
-      }
-      if (fm_input) {
-        release(fm_input);
-      }
-
-      break;
-
-    case WAVEFORM_VARIABLE_TRIANGLE:
-
-      static int32_t pindex;
-
-      for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
-        // Calculate interpolated sin
-
-        index = tone_phase >> 23;
-
-        if (index < knee) {
-          vtout = ((index * waveamp) / knee) - waveamp / 2;
-        }
-        if (index >= knee) {
-          vtout = ((((index - knee) * waveamp) / (wavelength - knee)) * -1) + waveamp / 2;
-          //vtout = 0;
-
-        }
-        val1 = vtout;
-
-        *bp++ = (short)((val1 * tone_amp) >> 15);
-
-        if (fm_input) {
-          mod = fm_input->data[i];
-          tone_phase += tone_incr + (multiply_32x32_rshift32(tone_incr, mod << 16) << 1);
-        }
-        else {
-          tone_phase += tone_incr;
-        }
-        //tone_phase += tone_incr;
-        // If tone_phase has overflowed, truncate the top bit
-        if (tone_phase & 0x80000000)tone_phase &= 0x7fffffff;
-      }
-
-      if (fm_input) {
-        release(fm_input);
-      }
-
-      break;
-
-    case WAVEFORM_TRIANGLE:
-
-      for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
-        if (tone_phase & 0x80000000) {
-          // negative half-cycle
-          tmp_amp = -tone_amp;
-        }
-        else {
-          // positive half-cycle
-          tmp_amp = tone_amp;
-        }
-        mag = tone_phase << 2;
-        // Determine which quadrant
-        if (tone_phase & 0x40000000) {
-          // negate the magnitude
-          mag = ~mag + 1;
-        }
-        *bp++ = ((short)(mag >> 17) * tmp_amp) >> 15;
-
-        if (fm_input) {
-          mod = fm_input->data[i];
-          tone_phase += tone_incr + (multiply_32x32_rshift32(tone_incr, mod << 16) << 1);
-        }
-        else {
-          tone_phase += tone_incr;
-        }
-
-        if (tone_phase & 0x80000000)tone_phase &= 0x7fffffff;
-      }
-
-      if (fm_input) {
-        release(fm_input);
-      }
-      break;
-
-
-    case WAVEFORM_PULSE:
-
-      for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
-
-        if (tone_phase < tone_width)*bp++ = -tone_amp;
-        else *bp++ = tone_amp;
-
-        if (fm_input) {
-          mod = fm_input->data[i];
-          tone_phase += tone_incr + (multiply_32x32_rshift32(tone_incr, mod << 16) << 1);
-        }
-        else {
-          tone_phase += tone_incr;
-        }
-        //tone_phase += tone_incr;
-        // If tone_phase has overflowed, truncate the top bit
-        if (tone_phase & 0x80000000)tone_phase &= 0x7fffffff;
-      }
-
-      if (fm_input) {
-        release(fm_input);
-      }
-      break;
-
-
-
-
-    case WAVEFORM_SAMPLE_HOLD:
-      for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
-        if (tone_phase < tone_incr) {
-          sample = random(-tone_amp, tone_amp);
-        }
-        *bp++ = sample;
-        if (fm_input) {
-          mod = fm_input->data[i];
-          tone_phase += tone_incr + (multiply_32x32_rshift32(tone_incr, mod << 16) << 1);
-        }
-        else {
-          tone_phase += tone_incr;
-        }
-      }
-      if (fm_input) {
-        release(fm_input);
-      }
-      break;
-    }
-
-    if (tone_offset) {
-      bp = block->data;
-      end = bp + AUDIO_BLOCK_SAMPLES;
-      do {
-        val1 = *bp;
-        *bp++ = signed_saturate_rshift(val1 + tone_offset, 16, 0);
-      } while (bp < end);
-    }
-    transmit(block, 0);
-    release(block);
-  }
+// waveforms.c
+extern "C" {
+  extern const int16_t AudioWaveformSine[257];
 }
 
+#define AUDIO_SAMPLE_RATE_ROUNDED (44118)
+
+#define DELAY_PASSTHRU -1
+
+#define WAVEFORM_SINE      0
+#define WAVEFORM_SAWTOOTH  1
+#define WAVEFORM_SQUARE    2
+#define WAVEFORM_TRIANGLE  3
+#define WAVEFORM_ARBITRARY 4
+#define WAVEFORM_PULSE     5
+#define WAVEFORM_SAWTOOTH_REVERSE 6
+#define WAVEFORM_SAMPLE_HOLD 7
+#define WAVEFORM_VARIABLE_TRIANGLE 8
+// todo: remove these...
+#define TONE_TYPE_SINE     0
+#define TONE_TYPE_SAWTOOTH 1
+#define TONE_TYPE_SQUARE   2
+#define TONE_TYPE_TRIANGLE 3
+
+class AudioSynthWaveform :
+  public AudioStream
+{
+public:
+  AudioSynthWaveform(void) : AudioStream(1, inputQueueArray) {}
+// AudioStream(0, NULL),
+  /*
+  tone_amp(0), tone_freq(0),
+  tone_phase(0), tone_width(0.25), tone_incr(0), tone_type(0),
+  tone_offset(0), arbdata(NULL)
+  {
+  }
+  */
+  void frequency(float t_freq) {
+    if (t_freq < 0.0) t_freq = 0.0;
+    else if (t_freq > AUDIO_SAMPLE_RATE_EXACT / 2) t_freq = AUDIO_SAMPLE_RATE_EXACT / 2;
+    tone_incr = (t_freq * (0x80000000LL / AUDIO_SAMPLE_RATE_EXACT)) + 0.5;
+  }
+
+  void phase(float angle) {
+    if (angle < 0.0) angle = 0.0;
+    else if (angle > 360.0) {
+      angle = angle - 360.0;
+      if (angle >= 360.0) return;
+    }
+    tone_phase = angle * (2147483648.0 / 360.0);
+  }
+
+  void amplitude(float n) {        // 0 to 1.0
+    if (n < 0) n = 0;
+    else if (n > 1.0) n = 1.0;
+    if ((tone_amp == 0) && n) {
+      // reset the phase when the amplitude was zero
+      // and has now been increased.
+      tone_phase = 0;
+    }
+    // set new magnitude
+    tone_amp = n * 32767.0;
+  }
+  void offset(float n) {
+    if (n < -1.0) n = -1.0;
+    else if (n > 1.0) n = 1.0;
+    tone_offset = n * 32767.0;
+  }
+
+  void varible_triangle(float n) {
+    if (n < 0) {
+      n = 0;
+    }
+    if (n > 256) {
+      n = 256;
+    }
+
+    knee = n * 256.00;
+  }
+
+
+  void pulseWidth(float n) {          // 0.0 to 1.0
+    if (n < 0) n = 0;
+    else if (n > 1.0) n = 1.0;
+    tone_width = n * 0x7fffffffLL;
+
+    knee = n * 256;
+    // pulse width is stored as the equivalent phase
+  }
+
+  void begin(short t_type) {
+    tone_phase = 0;
+    tone_type = t_type;
+  }
+  void begin(float t_amp, float t_freq, short t_type) {
+    amplitude(t_amp);
+    frequency(t_freq);
+    begin(t_type);
+  }
+  void arbitraryWaveform(const int16_t *data, float maxFreq) {
+    arbdata = data;
+    arb_len = 255;
+  }
+  void arbitraryWaveform(const int16_t *data, float maxFreq, uint16_t len_def) {
+    arbdata = data;
+    if (len_def > 2047) {
+      len_def = 2047;
+    }
+    arb_len = len_def;
+  }
+  virtual void update(void);
+
+private:
+  short    tone_amp;
+  short    tone_freq;
+  uint32_t tone_phase;
+  uint32_t tone_width;
+  uint16_t arb_len;
+  uint16_t knee;
+  int32_t prev0;
+  int32_t mod, pmod, sync1111, psync, tick;
+  int32_t vtout, vtout2;
+  int32_t waveamp = 65536;
+  int32_t wavelength = 256;
+  // sample for SAMPLE_HOLD
+  short sample;
+  // volatile prevents the compiler optimizing out the frequency function
+  volatile uint32_t tone_incr;
+  short    tone_type  ;
+  int16_t  tone_offset;
+  const int16_t *arbdata;
+  audio_block_t *inputQueueArray[1];
+
+};
+
+
+
+#endif
