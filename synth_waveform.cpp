@@ -216,6 +216,29 @@ void AudioSynthWaveform::update(void)
       }
       break;
 
+    case WAVEFORM_SAWTOOTH_REVERSE:
+      if (shape_input) {
+        release(shape_input);
+      }
+
+      if (fm_input) {
+
+        for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
+          *bp++ = ((short)(tone_phase >> 15) * tone_amp) >> 15;
+          mod = fm_input->data[i];
+          tone_phase -= tone_incr + (multiply_32x32_rshift32(tone_incr, mod << 16) << 1);
+        }
+        release(fm_input);
+      }
+
+      else {
+        for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
+          *bp++ = ((short)(tone_phase >> 15) * tone_amp) >> 15;
+          tone_phase -= tone_incr;
+        }
+      }
+      break;
+
 
     case WAVEFORM_VARIABLE_TRIANGLE:
 
@@ -546,7 +569,7 @@ void AudioSynthWaveform::update(void)
           for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
 
             int32_t shape_mod = shape_input->data[i];
-            uint32_t tone_width_mod = tone_width + (shape_mod <<16);
+            uint32_t tone_width_mod = tone_width + (shape_mod << 16);
 
 
             if (tone_width_mod < 1) {
@@ -572,6 +595,35 @@ void AudioSynthWaveform::update(void)
             // If tone_phase has overflowed, truncate the top bit
             if (tone_phase & 0x80000000)tone_phase &= 0x7fffffff;
           }
+        }
+      }
+      break;
+
+    case WAVEFORM_SAMPLE_HOLD:
+
+      if (shape_input) {
+        release(shape_input);
+      }
+
+      if (fm_input) {
+
+        for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
+          if (tone_phase < tone_incr) {
+            sample = random(-tone_amp, tone_amp);
+          }
+          *bp++ = sample;
+          mod = fm_input->data[i];
+          tone_phase += tone_incr + (multiply_32x32_rshift32(tone_incr, mod << 16) << 1);
+        }
+        release(fm_input);
+      }
+      else {
+        for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
+          if (tone_phase < tone_incr) {
+            sample = random(-tone_amp, tone_amp);
+          }
+          *bp++ = sample;
+          tone_phase += tone_incr;
         }
       }
       break;
