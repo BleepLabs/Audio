@@ -16,7 +16,7 @@ Sample and Hold - Allows for smooth bitcrushing at arbitrary rates and classic s
 Granular effect - Simple pitch shifting and freezing<br>
 
 Arbitrary wavetable voice length<br>
-arbitraryWaveform(sample array, maxFreq (unuses still), length of array (2047 max)) <br>
+arbitraryWaveform(sample array, maxFreq (unused still), length of array (2047 max)) <br>
 
 Bandlimited wavetables<br>
 See bandlimiting directory for an example on using WAVEFORM_ARBITRARY to produce bandlimited oscillators as well as the processing sketch used to generate the arrays.<br>
