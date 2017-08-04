@@ -20,8 +20,8 @@ Granular effect - Simple pitch shifting and freezing<br>
 Arbitrary wavetable voice length<br>
 arbitraryWaveform(sample array, maxFreq (unuses still), length of array (2047 max)) <br>
 
-Bandlimited wavetables
-See bandlimited direct for an example and the processing sketch uised to generate the arrays.
+Bandlimited wavetables<br>
+See bandlimiting directory for an example on using WAVEFORM_ARBITRARY to produce bandlimited oscillators as well as the processing sketch used to generate the arrays.<br>
 
 Variable triangle wave. WAVEFORM_VARIABLE_TRIANGLE <br>
 waveform1.varible_triangle(0); or waveform1.pulseWidth(0) would be a saw<br>
