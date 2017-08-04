@@ -1,5 +1,5 @@
-Some additions to Paul's incredible teesny audio library that I created for the Thingamagoop 3000 and other projects. 
-<br>
+Some additions to Paul's incredible teesny audio library that I created for the Thingamagoop 3000 and other projects. <br>
+ <br>
 Additions:<br>
 FM input in waveform synth - All you need to do is patch it manually as it's not in the tool. For example:<br>
 AudioConnection          patchCord3(waveform1, 0, waveform2, 0);<br>
