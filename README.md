@@ -15,13 +15,23 @@ Variable delay - Interpolated delay time gives tape like response. <br>
 
 Sample and Hold - Allows for smooth bitcrushing at arbitrary rates and classic s&h modulators.<br>
 
-Granular effect - Simple pitch shifting  and freezing<br>
+Granular effect - Simple pitch shifting and freezing<br>
 
 Arbitrary wavetable voice length<br>
+arbitraryWaveform(sample array, maxFreq (unuses still), length of array (2047 max)) <br>
+
+Bandlimited wavetables
+See bandlimited direct for an example and the processing sketch uised to generate the arrays.
 
 Variable triangle wave. WAVEFORM_VARIABLE_TRIANGLE <br>
-waveform1.varible_triangle(0); would be a saw<br>
+waveform1.varible_triangle(0); or waveform1.pulseWidth(0) would be a saw<br>
 waveform1.varible_triangle(.75); would be halfway between a regular triangle and a ramp<br>
+
+Control input for pulse width and varible triangle. For example:<br>
+AudioConnection          patchCord1(sine1, 0, waveform1, 0);<br>
+AudioConnection          patchCord2(sine2, 0, waveform1, 1);<br>
+Would be fm from the sine wone and shpe modulation from sine2<br>
+
 
 <br>
 http://bleeplabs.com/store/thingamagoop-3000/
