@@ -32,7 +32,7 @@ class AudioSynthWaveform :
   public AudioStream
 {
 public:
-  AudioSynthWaveform(void) : AudioStream(1, inputQueueArray) {}
+  AudioSynthWaveform(void) : AudioStream(2, inputQueueArray) {}
 // AudioStream(0, NULL),
   /*
   tone_amp(0), tone_freq(0),
@@ -90,7 +90,7 @@ public:
     else if (n > 1.0) n = 1.0;
     tone_width = n * 0x7fffffffLL;
 
-    knee = n * 256;
+    knee = n * 256.00;
     // pulse width is stored as the equivalent phase
   }
 
@@ -135,7 +135,7 @@ private:
   short    tone_type  ;
   int16_t  tone_offset;
   const int16_t *arbdata;
-  audio_block_t *inputQueueArray[1];
+  audio_block_t *inputQueueArray[2];
 
 };
 
