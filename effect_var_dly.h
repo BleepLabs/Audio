@@ -8,7 +8,7 @@ public:
   AudioStream(1,inputQueueArray) { 
   }
 
-  void begin(short *delayline,int max_len,int dly_len, short sm, short lerp);
+  void begin(short *delayline,int max_len,int dly_len, short sm, short lerp, float rate1);
   int16_t length(int dly_len);
   virtual void update(void);
   
