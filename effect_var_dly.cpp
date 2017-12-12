@@ -2,7 +2,7 @@
 #include "effect_var_dly.h"
 #include "arm_math.h"
 
-void AudioEffectvariableDelay::begin(short *delayline,int max_len,int dly_len, short sm, short lerp)
+void AudioEffectvariableDelay::begin(short *delayline,int max_len,int dly_len, short sm, short lerp, float rate1)
 {
   max_dly_len=max_len-1;
 
@@ -39,7 +39,7 @@ void AudioEffectvariableDelay::update(void)
 {
   audio_block_t *block;
   short *bp;
-  //static uint32_t preva;
+  static uint32_t accumulator0;
   static short tick,tock;
   int input1;
 
@@ -68,15 +68,18 @@ void AudioEffectvariableDelay::update(void)
 
 
       // increment the index into the circular delay line buffer
-        tock=!tock;
-      if (tock==0){
-      write_head++;
-    }
+      
+      accumulator0 += rate1 * (65536.0f);
+
+      if (accumulator0 > 65535){
+        accumulator0 -= 65535;
+        write_head++;
+      }
+      
       // wrap the index around if necessary
       if(write_head >= max_dly_len_m) {
 
         write_head = 0;
-        //digitalWrite(3,tock);
 
       }
 
