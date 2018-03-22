@@ -29,12 +29,28 @@
 #include "AudioStream.h"
 #include "utility/dspinst.h"
 
-class AudioEffectDigitalCombine : public AudioStream
+#define OR      0
+#define XOR  1
+#define AND    2
+#define MODULO  3
+
+class AudioEffectDigitalCombine : 
+public AudioStream
 {
 public:
-	AudioEffectDigitalCombine() : AudioStream(2, inputQueueArray) { }
+	AudioEffectDigitalCombine() : 
+	AudioStream(2, inputQueueArray),mode_sel(OR) { }
+	
+	  void mode(short mode_in) {
+	  	if (mode_in>3){
+	  		mode_in=3;
+	  	}
+	  	mode_sel=mode_in;
+	  }
+
 	virtual void update(void);
 private:
+	short mode_sel;
 	audio_block_t *inputQueueArray[2];
 };
 

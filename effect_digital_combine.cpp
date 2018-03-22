@@ -45,20 +45,37 @@ void AudioEffectDigitalCombine::update(void)
 	}
 	pa = (uint32_t *)(blocka->data);
 	pb = (uint32_t *)(blockb->data);
-	end = pa + AUDIO_BLOCK_SAMPLES/2;
+	end = pa + AUDIO_BLOCK_SAMPLES / 2;
 
 	while (pa < end) {
 		a12 = *pa;
-		a34 = *(pa+1);
+		a34 = *(pa + 1);
 
 		b12 = *pb++;
 		b34 = *pb++;
-	
-		a12 = a12 | b12;
+		
+		if (mode_sel == OR) {
+			a12 = a12 | b12;
+			a34 = a34 | b34;
+		}
+		if (mode_sel == XOR) {
+			a12 = a12 ^ b12;
+			a34 = a34 ^ b34;
+		}
 
-		a34 = a34 | b34;
+		if (mode_sel == AND) {
+			a12 = a12 & b12;
+			a34 = a34 & b34;
+		}
+		if (mode_sel == MODULO) {
+			a12 = a12 % b12;
+			a34 = a34 % b34;
+		}
+
+
+
 		*pa++ = a12;
-     	*pa++ = a34;
+		*pa++ = a34;
 
 	}
 
