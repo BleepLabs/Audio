@@ -21,8 +21,10 @@ public:
 private:
   audio_block_t *inputQueueArray[1];
   int16_t *sample_bank;
-  int16_t max_sample_len;
-  int16_t write_head,read_head,grain_mode,freeze_len,allow_len_change;
+  uint32_t max_sample_len;
+  int16_t freeze_en,shift_en;
+  uint32_t write_head,read_head;
+  int16_t grain_mode,freeze_len,allow_len_change;
   int16_t playback_rate;
   int16_t capture_trigger,capture_index,current_mode,playpack_rate;
   int32_t accumulator,play_index,increment;
