@@ -22,6 +22,10 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
+ 
+   Combine analog signals with bitwise expressions like OXR. Combining two simple oscillators results in interesting new waveforms, 
+   Combining white noise or dynamic incoming audio results in aggressive digital distortion.
+ 
  */
 
 #ifndef effect_digital_combine_h_
