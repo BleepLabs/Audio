@@ -23,8 +23,13 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  
-    Interpolated delay time gives delay effect with a tape like response. 
-    Control of this interpolation speed and delay sample rate is now possible
+ Interpolated delay time gives delay effect with a tape like response. 
+ Control of this interpolation speed and delay sample rate is now possible
+ 
+ todo:
+ arbitrary sample rate control rather than just divide
+ interpolate between sample mode rather than interpolate time
+ arbitraty multi tap
  
  */
 
