@@ -22,163 +22,189 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
- 
-FM input in waveform synth - second input modulates frequency of the oscillator just line SineFM 
-Arbitrary wavetable voice length
-arbitraryWaveform(sample array, maxFreq (unused still), length of array (2047 max)) 
-
-Variable triangle wave. WAVEFORM_VARIABLE_TRIANGLE 
-waveform1.varible_triangle(0); or waveform1.pulseWidth(0) would be a saw
-waveform1.varible_triangle(.75); would be halfway between a regular triangle and a ramp
-
-Control input for pulse width and varible triangle. For example:
-AudioConnection patchCord1(sine1, 0, waveform1, 0);
-AudioConnection patchCord2(sine2, 0, waveform1, 1);
-Would be fm from the sine1 and shape modulation from sine2
- 
  */
 
 #ifndef synth_waveform_h_
 #define synth_waveform_h_
 
+#include <Arduino.h>
 #include "AudioStream.h"
 #include "arm_math.h"
 
 // waveforms.c
 extern "C" {
-  extern const int16_t AudioWaveformSine[257];
+extern const int16_t AudioWaveformSine[257];
 }
 
-#define AUDIO_SAMPLE_RATE_ROUNDED (44118)
 
-#define DELAY_PASSTHRU -1
+#define WAVEFORM_SINE              0
+#define WAVEFORM_SAWTOOTH          1
+#define WAVEFORM_SQUARE            2
+#define WAVEFORM_TRIANGLE          3
+#define WAVEFORM_ARBITRARY         4
+#define WAVEFORM_PULSE             5
+#define WAVEFORM_SAWTOOTH_REVERSE  6
+#define WAVEFORM_SAMPLE_HOLD       7
+#define WAVEFORM_TRIANGLE_VARIABLE 8
 
-#define WAVEFORM_SINE      0
-#define WAVEFORM_SAWTOOTH  1
-#define WAVEFORM_SQUARE    2
-#define WAVEFORM_TRIANGLE  3
-#define WAVEFORM_ARBITRARY 4
-#define WAVEFORM_PULSE     5
-#define WAVEFORM_SAWTOOTH_REVERSE 6
-#define WAVEFORM_SAMPLE_HOLD 7
-#define WAVEFORM_VARIABLE_TRIANGLE 8
-// todo: remove these...
-#define TONE_TYPE_SINE     0
-#define TONE_TYPE_SAWTOOTH 1
-#define TONE_TYPE_SQUARE   2
-#define TONE_TYPE_TRIANGLE 3
-
-class AudioSynthWaveform :
-  public AudioStream
+class AudioSynthWaveform : public AudioStream
 {
 public:
-  AudioSynthWaveform(void) : AudioStream(2, inputQueueArray) {}
-// AudioStream(0, NULL),
-  /*
-  tone_amp(0), tone_freq(0),
-  tone_phase(0), tone_width(0.25), tone_incr(0), tone_type(0),
-  tone_offset(0), arbdata(NULL)
-  {
-  }
-  */
-  void frequency(float t_freq) {
-    if (t_freq < 0.0) t_freq = 0.0;
-    else if (t_freq > AUDIO_SAMPLE_RATE_EXACT / 2) t_freq = AUDIO_SAMPLE_RATE_EXACT / 2;
-    tone_incr = (t_freq * (0x80000000LL / AUDIO_SAMPLE_RATE_EXACT)) + 0.5;
-  }
+	AudioSynthWaveform(void) : AudioStream(0,NULL),
+		phase_accumulator(0), phase_increment(0), phase_offset(0),
+		magnitude(0), pulse_width(0x40000000),
+		arbdata(NULL), sample(0), tone_type(WAVEFORM_SINE),
+		tone_offset(0) {
+	}
 
-  void phase(float angle) {
-    if (angle < 0.0) angle = 0.0;
-    else if (angle > 360.0) {
-      angle = angle - 360.0;
-      if (angle >= 360.0) return;
-    }
-    tone_phase = angle * (2147483648.0 / 360.0);
-  }
-
-  void amplitude(float n) {        // 0 to 1.0
-    if (n < 0) n = 0;
-    else if (n > 1.0) n = 1.0;
-    if ((tone_amp == 0) && n) {
-      // reset the phase when the amplitude was zero
-      // and has now been increased.
-      tone_phase = 0;
-    }
-    // set new magnitude
-    tone_amp = n * 32767.0;
-  }
-  void offset(float n) {
-    if (n < -1.0) n = -1.0;
-    else if (n > 1.0) n = 1.0;
-    tone_offset = n * 32767.0;
-  }
-
-  void varible_triangle(float n) {
-    if (n < 0) {
-      n = 0;
-    }
-    if (n > 256) {
-      n = 256;
-    }
-
-    knee = n * 256.00;
-  }
-
-
-  void pulseWidth(float n) {          // 0.0 to 1.0
-    if (n < 0) n = 0;
-    else if (n > 1.0) n = 1.0;
-    tone_width = n * 0x7fffffffLL;
-
-    knee = n * 256.00;
-    // pulse width is stored as the equivalent phase
-  }
-
-  void begin(short t_type) {
-    tone_phase = 0;
-    tone_type = t_type;
-  }
-  void begin(float t_amp, float t_freq, short t_type) {
-    amplitude(t_amp);
-    frequency(t_freq);
-    begin(t_type);
-  }
-  void arbitraryWaveform(const int16_t *data, float maxFreq) {
-    arbdata = data;
-    arb_len = 255;
-  }
-  void arbitraryWaveform(const int16_t *data, float maxFreq, uint16_t len_def) {
-    arbdata = data;
-    if (len_def > 2047) {
-      len_def = 2047;
-    }
-    arb_len = len_def;
-  }
-  virtual void update(void);
+	void frequency(float freq) {
+		if (freq < 0.0) {
+			freq = 0.0;
+		} else if (freq > AUDIO_SAMPLE_RATE_EXACT / 2) {
+			freq = AUDIO_SAMPLE_RATE_EXACT / 2;
+		}
+		phase_increment = freq * (4294967296.0 / AUDIO_SAMPLE_RATE_EXACT);
+		if (phase_increment > 0x7FFE0000u) phase_increment = 0x7FFE0000;
+	}
+	void phase(float angle) {
+		if (angle < 0.0) {
+			angle = 0.0;
+		} else if (angle > 360.0) {
+			angle = angle - 360.0;
+			if (angle >= 360.0) return;
+		}
+		phase_offset = angle * (4294967296.0 / 360.0);
+	}
+	void amplitude(float n) {	// 0 to 1.0
+		if (n < 0) {
+			n = 0;
+		} else if (n > 1.0) {
+			n = 1.0;
+		}
+		magnitude = n * 65536.0;
+	}
+	void offset(float n) {
+		if (n < -1.0) {
+			n = -1.0;
+		} else if (n > 1.0) {
+			n = 1.0;
+		}
+		tone_offset = n * 32767.0;
+	}
+	void pulseWidth(float n) {	// 0.0 to 1.0
+		if (n < 0) {
+			n = 0;
+		} else if (n > 1.0) {
+			n = 1.0;
+		}
+		pulse_width = n * 4294967296.0;
+	}
+	void begin(short t_type) {
+		phase_offset = 0;
+		tone_type = t_type;
+	}
+	void begin(float t_amp, float t_freq, short t_type) {
+		amplitude(t_amp);
+		frequency(t_freq);
+		phase_offset = 0;
+		tone_type = t_type;
+	}
+	void arbitraryWaveform(const int16_t *data, float maxFreq) {
+		arbdata = data;
+	}
+	virtual void update(void);
 
 private:
-  short    tone_amp;
-  short    tone_freq;
-  uint32_t tone_phase;
-  uint32_t tone_width;
-  uint16_t arb_len;
-  uint16_t knee;
-  int32_t prev0;
-  int32_t mod, pmod, sync1111, psync, tick;
-  int32_t vtout, vtout2;
-  int32_t waveamp = 65536;
-  int32_t wavelength = 256;
-  // sample for SAMPLE_HOLD
-  short sample;
-  // volatile prevents the compiler optimizing out the frequency function
-  volatile uint32_t tone_incr;
-  short    tone_type  ;
-  int16_t  tone_offset;
-  const int16_t *arbdata;
-  audio_block_t *inputQueueArray[2];
-
+	uint32_t phase_accumulator;
+	uint32_t phase_increment;
+	uint32_t phase_offset;
+	int32_t  magnitude;
+	uint32_t pulse_width;
+	const int16_t *arbdata;
+	int16_t  sample; // for WAVEFORM_SAMPLE_HOLD
+	short    tone_type;
+	int16_t  tone_offset;
 };
 
+
+class AudioSynthWaveformModulated : public AudioStream
+{
+public:
+	AudioSynthWaveformModulated(void) : AudioStream(2, inputQueueArray),
+		phase_accumulator(0), phase_increment(0), modulation_factor(32768),
+		magnitude(0), arbdata(NULL), sample(0), tone_offset(0),
+		tone_type(WAVEFORM_SINE), modulation_type(0) {
+	}
+
+	void frequency(float freq) {
+		if (freq < 0.0) {
+			freq = 0.0;
+		} else if (freq > AUDIO_SAMPLE_RATE_EXACT / 2) {
+			freq = AUDIO_SAMPLE_RATE_EXACT / 2;
+		}
+		phase_increment = freq * (4294967296.0 / AUDIO_SAMPLE_RATE_EXACT);
+		if (phase_increment > 0x7FFE0000u) phase_increment = 0x7FFE0000;
+	}
+	void amplitude(float n) {	// 0 to 1.0
+		if (n < 0) {
+			n = 0;
+		} else if (n > 1.0) {
+			n = 1.0;
+		}
+		magnitude = n * 65536.0;
+	}
+	void offset(float n) {
+		if (n < -1.0) {
+			n = -1.0;
+		} else if (n > 1.0) {
+			n = 1.0;
+		}
+		tone_offset = n * 32767.0;
+	}
+	void begin(short t_type) {
+		tone_type = t_type;
+	}
+	void begin(float t_amp, float t_freq, short t_type) {
+		amplitude(t_amp);
+		frequency(t_freq);
+		tone_type = t_type;
+	}
+	void arbitraryWaveform(const int16_t *data, float maxFreq) {
+		arbdata = data;
+	}
+	void frequencyModulation(float octaves) {
+		if (octaves > 12.0) {
+			octaves = 12.0;
+		} else if (octaves < 0.1) {
+			octaves = 0.1;
+		}
+		modulation_factor = octaves * 4096.0;
+		modulation_type = 0;
+	}
+	void phaseModulation(float degrees) {
+		if (degrees > 9000.0) {
+			degrees = 9000.0;
+		} else if (degrees < 30.0) {
+			degrees = 30.0;
+		}
+		modulation_factor = degrees * (65536.0 / 180.0);
+		modulation_type = 1;
+	}
+	virtual void update(void);
+
+private:
+	audio_block_t *inputQueueArray[2];
+	uint32_t phase_accumulator;
+	uint32_t phase_increment;
+	uint32_t modulation_factor;
+	int32_t  magnitude;
+	const int16_t *arbdata;
+	uint32_t phasedata[AUDIO_BLOCK_SAMPLES];
+	int16_t  sample; // for WAVEFORM_SAMPLE_HOLD
+	int16_t  tone_offset;
+	uint8_t  tone_type;
+	uint8_t  modulation_type;
+};
 
 
 #endif

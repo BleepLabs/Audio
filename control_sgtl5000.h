@@ -32,6 +32,8 @@
 class AudioControlSGTL5000 : public AudioControl
 {
 public:
+	AudioControlSGTL5000(void) : i2c_addr(0x0A) { }
+	void setAddress(uint8_t level);
 	bool enable(void);
 	bool disable(void) { return false; }
 	bool volume(float n) { return volumeInteger(n * 129 + 0.499); }
@@ -60,6 +62,9 @@ public:
 	unsigned short lineOutLevel(uint8_t left, uint8_t right);
 	unsigned short dacVolume(float n);
 	unsigned short dacVolume(float left, float right);
+	bool dacVolumeRamp();
+	bool dacVolumeRampLinear();
+	bool dacVolumeRampDisable();
 	unsigned short adcHighPassFilterEnable(void);
 	unsigned short adcHighPassFilterFreeze(void);
 	unsigned short adcHighPassFilterDisable(void);
@@ -89,6 +94,7 @@ protected:
 	bool muted;
 	bool volumeInteger(unsigned int n); // range: 0x00 to 0x80
 	uint16_t ana_ctrl;
+	uint8_t i2c_addr;
 	unsigned char calcVol(float n, unsigned char range);
 	unsigned int read(unsigned int reg);
 	bool write(unsigned int reg, unsigned int val);

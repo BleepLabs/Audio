@@ -1,0 +1,213 @@
+/* Audio Library for Teensy 3.X
+ * Copyright (c) 2014, Paul Stoffregen, paul@pjrc.com
+ *
+ * Development of this audio library was funded by PJRC.COM, LLC by sales of
+ * Teensy and Audio Adaptor boards.  Please support PJRC's efforts to develop
+ * open source software by purchasing Teensy or other PJRC products.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice, development funding notice, and this permission
+ * notice shall be included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
+#include "sampler.h"
+#include "arm_math.h"
+#include "utility/dspinst.h"
+
+
+
+void AudioSampler::update(void)
+{
+  audio_block_t *ab_left;
+  audio_block_t *ab_right;
+
+  short *bpl, *bpr, *end;
+  int16_t *readL, *readR, *writeR, *writeL;
+  int32_t val1, val2, val3;
+  short tempf;
+
+
+
+  if (tone_amp == 0) return;
+  ab_left = allocate();
+  ab_right = allocate();
+
+  if (ab_left) {
+    bpl = ab_left->data;
+    bpr = ab_right->data;
+
+    if (rev == 0) {
+      blocknum++;
+      //Serial.println(blocknum);
+      // readL = sample_left_A;
+      // readR = sample_right_A;
+      // writeL = sample_left_A;
+      // writeR = sample_right_A;
+      for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
+
+        if (playing == 0) {
+          *bpl++ = (short)(0);
+          *bpr++ = (short)(0);
+        }
+
+        if (playing == 1) {
+          pindex = index;
+          index = tone_phase >> 23; //23 is 256 //changing causes rate reduction??
+          //Serial.println(index + fpos);
+
+          if (pindex > 128 && index < 128) {
+            fpos += 256; // this is fixed its the max size of index
+            bankshift ++;
+            // Serial.print(bankshift);
+            // Serial.print(" ");
+            // Serial.println(bankswitch);
+            if (bankshift > (SPI_SIZE >> 8) - 1) {
+              bankshift = 0;
+              get = 1;
+              bankswitch = !bankswitch;
+
+              // int16_t *readL = sample_left;
+              // int16_t *readR = sample_right;
+            }
+
+            bankoff = bankshift << 8;
+          }
+
+          if (bankswitch == 0) {
+            readL = sample_left_A;
+            readR = sample_right_A;
+            writeL = sample_left_B;
+            writeR = sample_right_B;
+          }
+
+          if (bankswitch == 1) {
+            readL = sample_left_B;
+            readR = sample_right_B;
+            writeL = sample_left_A;
+            writeR = sample_right_A;
+          }
+
+          if (fpos + index > sample_len ) {
+            sample_address = 0;
+            fpos = mod_start_pos;
+            index = 0;
+            tone_phase = 0;
+
+            bankshift = 0;
+            bankoff = 0;
+
+            if (looping == 0) {
+              //end_flag = 1;
+              playing = 0;
+
+            }
+
+            AudioStartUsingSPI();
+            SerialFlash.read(start_pos + (fpos * 4), in8, buffrl);
+            AudioStopUsingSPI();
+
+            js = 0;
+            for (uint16_t  j = 0; j < buffrl - 4; j += 4) {
+              readL[js] = (in8[j + 1] << 8) | (in8[j]);
+              readR[js] = (in8[j + 3] << 8) | (in8[j + 2]);
+              js++;
+            }
+
+          }
+
+          if (fpos + index > mod_start_pos + end_mod && end_mod_en == 1) {
+
+            sample_address = 0;
+            fpos = mod_start_pos;
+            index = 0;
+            tone_phase = 0;
+            get = 1;
+
+            if (looping == 0) {
+              // end_flag = 1;
+              playing = 0;
+            }
+          }
+
+          if (get == 1) {
+            get = 0;
+            // Serial.print("  ");
+            // Serial.print(blocknum);
+            // Serial.print(" ");
+            // Serial.println(i);
+            uint32_t tt = micros();
+            AudioStartUsingSPI();
+
+            if (SerialFlash.ready() == 1) {   //seems to always be ready untill its crashed
+
+              SerialFlash.read(start_pos + (fpos * 4), in8, buffrl);
+              AudioStopUsingSPI();
+
+              js = 0;
+              for (uint16_t  j = 0; j < buffrl - 4; j += 4) {
+                  readL[js] = (in8[j + 1] << 8) | (in8[j]);
+                  readR[js] = (in8[j + 3] << 8) | (in8[j + 2]);
+                
+                js++;
+
+              }
+            }
+
+            else {
+              AudioStopUsingSPI();
+              Serial.println(" !");
+              get = 1;
+            }
+
+          }
+          scale = (tone_phase >> 7) & 0xFFFF;
+
+          val1 = *(writeL + index + bankoff);
+          val2 = *(writeL + (index + 1) + bankoff);
+          val2 *= scale;
+          val1 *= 0xFFFF - scale;
+          val3 = (val1 + val2) >> 16;
+          *bpl++ = (short)((val3 * tone_amp) >> 15);
+
+          val1 = *(writeR + index + bankoff);
+          val2 = *(writeR + (index + 1) + bankoff);
+          val2 *= scale;
+          val1 *= 0xFFFF - scale;
+          val3 = (val1 + val2) >> 16;
+          *bpr++ = (short)((val3 * tone_amp) >> 15);
+
+          tone_phase += tone_incr;
+          tone_phase &= 0x7fffffff;
+
+        }
+      }
+    }
+
+
+
+    transmit(ab_left, 0);
+    transmit(ab_right, 1);
+
+    release(ab_left);
+    release(ab_right);
+
+  }
+}
+
+
+
+

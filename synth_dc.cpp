@@ -24,6 +24,7 @@
  * THE SOFTWARE.
  */
 
+#include <Arduino.h>
 #include "synth_dc.h"
 
 void AudioSynthWaveformDc::update(void)
@@ -54,7 +55,7 @@ void AudioSynthWaveformDc::update(void)
 		// transitioning to a new DC level
 		//count = (target - magnitude) / increment;
 		count = substract_int32_then_divide_int32(target, magnitude, increment);
-		if (count >= 128) {
+		if (count >= AUDIO_BLOCK_SAMPLES) {
 			// this update will not reach the target
 			do {
 				magnitude += increment;

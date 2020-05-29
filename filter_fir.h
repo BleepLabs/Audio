@@ -23,6 +23,7 @@
 #ifndef filter_fir_h_
 #define filter_fir_h_
 
+#include "Arduino.h"
 #include "AudioStream.h"
 #include "arm_math.h"
 
@@ -41,8 +42,11 @@ public:
 		coeff_p = cp;
 		// Initialize FIR instance (ARM DSP Math Library)
 		if (coeff_p && (coeff_p != FIR_PASSTHRU) && n_coeffs <= FIR_MAX_COEFFS) {
-			arm_fir_init_q15(&fir_inst, n_coeffs, (q15_t *)coeff_p,
-				&StateQ15[0], AUDIO_BLOCK_SAMPLES);
+			if (arm_fir_init_q15(&fir_inst, n_coeffs, (q15_t *)coeff_p,
+			  &StateQ15[0], AUDIO_BLOCK_SAMPLES) != ARM_MATH_SUCCESS) {
+				// n_coeffs must be an even number, 4 or larger
+				coeff_p = NULL;
+			}
 		}
 	}
 	void end(void) {

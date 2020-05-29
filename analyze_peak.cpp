@@ -24,6 +24,7 @@
  * THE SOFTWARE.
  */
 
+#include <Arduino.h>
 #include "analyze_peak.h"
 
 void AudioAnalyzePeak::update(void)
@@ -42,6 +43,8 @@ void AudioAnalyzePeak::update(void)
 	max = max_sample;
 	do {
 		int16_t d=*p++;
+		// TODO: can we speed this up with SSUB16 and SEL
+		// http://www.m4-unleashed.com/parallel-comparison/
 		if (d<min) min=d;
 		if (d>max) max=d;
 	} while (p < end);

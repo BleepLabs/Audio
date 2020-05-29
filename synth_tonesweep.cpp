@@ -20,6 +20,7 @@
  * THE SOFTWARE.
  */
 
+#include <Arduino.h>
 #include "synth_tonesweep.h"
 #include "arm_math.h"
 
@@ -34,7 +35,7 @@
 
 boolean AudioSynthToneSweep::play(float t_amp,int t_lo,int t_hi,float t_time)
 {
-  double tone_tmp;
+  float tone_tmp;
   
 if(0) {
   Serial.print("AudioSynthToneSweep.begin(tone_amp = ");
@@ -52,23 +53,24 @@ if(0) {
   if(t_amp > 1)return false;
   if(t_lo < 1)return false;
   if(t_hi < 1)return false;
-  if(t_hi >= 44100/2)return false;
-  if(t_lo >= 44100/2)return false;
-  if(t_time < 0)return false;
+  if(t_hi >= (int) AUDIO_SAMPLE_RATE_EXACT / 2)return false;
+  if(t_lo >= (int) AUDIO_SAMPLE_RATE_EXACT / 2)return false;
+  if(t_time <= 0)return false;
   tone_lo = t_lo;
   tone_hi = t_hi;
   tone_phase = 0;
 
   tone_amp = t_amp * 32767.0;
 
-  tone_tmp = tone_hi - tone_lo;
-  tone_sign = 1;
   tone_freq = tone_lo*0x100000000LL;
-  if(tone_tmp < 0) {
+  if (tone_hi >= tone_lo) {
+    tone_tmp = tone_hi - tone_lo;
+    tone_sign = 1;
+  } else {
     tone_sign = -1;
-    tone_tmp = -tone_tmp;
+    tone_tmp = tone_lo - tone_hi;
   }
-  tone_tmp = tone_tmp/t_time/44100.;
+  tone_tmp = tone_tmp / t_time / AUDIO_SAMPLE_RATE_EXACT;
   tone_incr = (tone_tmp * 0x100000000LL);
   sweep_busy = 1;
   return(true);
@@ -94,22 +96,23 @@ void AudioSynthToneSweep::update(void)
   block = allocate();
   if(block) {
     bp = block->data;
+    uint32_t tmp  = tone_freq >> 32; 
+    uint64_t tone_tmp = (0x400000000000LL * (int)(tmp&0x7fffffff)) / (int) AUDIO_SAMPLE_RATE_EXACT;
     // Generate the sweep
     for(i = 0;i < AUDIO_BLOCK_SAMPLES;i++) {
-      *bp++ = (short)(( (short)(arm_sin_q31((uint32_t)((tone_phase >> 15)&0x7fffffff))>>16) *tone_amp) >> 16);
-      uint64_t tone_tmp = (0x400000000000LL * (int)((tone_freq >> 32)&0x7fffffff))/44100;
+      *bp++ = (short)(( (short)(arm_sin_q31((uint32_t)((tone_phase >> 15)&0x7fffffff))>>16) *tone_amp) >> 15);
 
       tone_phase +=  tone_tmp;
       if(tone_phase & 0x800000000000LL)tone_phase &= 0x7fffffffffffLL;
 
       if(tone_sign > 0) {
-        if((tone_freq >> 32) > tone_hi) {
+        if(tmp > tone_hi) {
           sweep_busy = 0;
           break;
         }
         tone_freq += tone_incr;
       } else {
-        if((tone_freq >> 32) < tone_hi) {
+        if(tmp < tone_hi || tone_freq < tone_incr) {
           sweep_busy = 0;
 
           break;
@@ -120,8 +123,7 @@ void AudioSynthToneSweep::update(void)
     while(i < AUDIO_BLOCK_SAMPLES) {
       *bp++ = 0;
       i++;
-    }
-    //b_count++;
+    }    
     // send the samples to the left channel
     transmit(block,0);
     release(block);

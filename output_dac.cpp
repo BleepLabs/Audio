@@ -24,10 +24,11 @@
  * THE SOFTWARE.
  */
 
+#include <Arduino.h>
 #include "output_dac.h"
 #include "utility/pdb.h"
 
-#if defined(__MK20DX256__)
+#if defined(__MK20DX256__) || defined(__MK64FX512__) || defined(__MK66FX1M0__)
 
 DMAMEM static uint16_t dac_buffer[AUDIO_BLOCK_SAMPLES*2];
 audio_block_t * AudioOutputAnalog::block_left_1st = NULL;
@@ -42,7 +43,7 @@ void AudioOutputAnalog::begin(void)
 	SIM_SCGC2 |= SIM_SCGC2_DAC0;
 	DAC0_C0 = DAC_C0_DACEN;                   // 1.2V VDDA is DACREF_2
 	// slowly ramp up to DC voltage, approx 1/4 second
-	for (int16_t i=0; i<2048; i+=8) {
+	for (int16_t i=0; i<=2048; i+=8) {
 		*(int16_t *)&(DAC0_DAT0L) = i;
 		delay(1);
 	}
@@ -139,14 +140,14 @@ void AudioOutputAnalog::isr(void)
 		src = block->data;
 		do {
 			// TODO: this should probably dither
-			*dest++ = ((*src++) + 32767) >> 4;
+			*dest++ = ((*src++) + 32768) >> 4;
 		} while (dest < end);
 		AudioStream::release(block);
 		AudioOutputAnalog::block_left_1st = AudioOutputAnalog::block_left_2nd;
 		AudioOutputAnalog::block_left_2nd = NULL;
 	} else {
 		do {
-			*dest++ = 2047;
+			*dest++ = 2048;
 		} while (dest < end);
 	}
 	if (AudioOutputAnalog::update_responsibility) AudioStream::update_all();

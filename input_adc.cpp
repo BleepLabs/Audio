@@ -24,33 +24,43 @@
  * THE SOFTWARE.
  */
 
+#include <Arduino.h>
 #include "input_adc.h"
 #include "utility/pdb.h"
 #include "utility/dspinst.h"
 
+#define COEF_HPF_DCBLOCK    (1048300<<10)  // DC Removal filter coefficient in S1.30
+
 DMAMEM static uint16_t analog_rx_buffer[AUDIO_BLOCK_SAMPLES];
 audio_block_t * AudioInputAnalog::block_left = NULL;
 uint16_t AudioInputAnalog::block_offset = 0;
-uint16_t AudioInputAnalog::dc_average = 0;
+int32_t AudioInputAnalog::hpf_y1 = 0;
+int32_t AudioInputAnalog::hpf_x1 = 0;
+
 bool AudioInputAnalog::update_responsibility = false;
 DMAChannel AudioInputAnalog::dma(false);
 
-
 void AudioInputAnalog::init(uint8_t pin)
 {
-	uint32_t i, sum=0;
+    int32_t tmp;
 
 	// Configure the ADC and run at least one software-triggered
 	// conversion.  This completes the self calibration stuff and
 	// leaves the ADC in a state that's mostly ready to use
 	analogReadRes(16);
 	analogReference(INTERNAL); // range 0 to 1.2 volts
+#if F_BUS == 96000000 || F_BUS == 48000000 || F_BUS == 24000000
 	analogReadAveraging(8);
-	// Actually, do many normal reads, to start with a nice DC level
-	for (i=0; i < 1024; i++) {
-		sum += analogRead(pin);
-	}
-	dc_average = sum >> 10;
+#else
+	analogReadAveraging(4);
+#endif
+	// Note for review:
+    // Probably not useful to spin cycles here stabilizing
+    // since DC blocking is similar to te external analog filters
+    tmp = (uint16_t) analogRead(pin);
+    tmp = ( ((int32_t) tmp) << 14);
+    hpf_x1 = tmp;   // With constant DC level x1 would be x0
+    hpf_y1 = 0;     // Output will settle here when stable
 
 	// set the programmable delay block to trigger the ADC at 44.1 kHz
 #if defined(KINETISK)
@@ -128,12 +138,10 @@ void AudioInputAnalog::isr(void)
 	}
 }
 
-
-
 void AudioInputAnalog::update(void)
 {
 	audio_block_t *new_left=NULL, *out_left=NULL;
-	unsigned int dc, offset;
+	uint32_t offset;
 	int32_t tmp;
 	int16_t s, *p, *end;
 
@@ -178,23 +186,28 @@ void AudioInputAnalog::update(void)
 	block_offset = 0;
 	__enable_irq();
 
-	// find and subtract DC offset....
-	// TODO: this may not be correct, needs testing with more types of signals
-	dc = dc_average;
+    //
+	// DC Offset Removal Filter
+    // 1-pole digital high-pass filter implementation
+    //   y = a*(x[n] - x[n-1] + y[n-1])
+    // The coefficient "a" is as follows:
+    //  a = UNITY*e^(-2*pi*fc/fs)
+    //  fc = 2 @ fs = 44100
+    //
 	p = out_left->data;
 	end = p + AUDIO_BLOCK_SAMPLES;
 	do {
-		tmp = (uint16_t)(*p) - (int32_t)dc;
-		s = signed_saturate_rshift(tmp, 16, 0);
+		tmp = (uint16_t)(*p);
+        tmp = ( ((int32_t) tmp) << 14);
+        int32_t acc = hpf_y1 - hpf_x1;
+        acc += tmp;
+        hpf_y1 = FRACMUL_SHL(acc, COEF_HPF_DCBLOCK, 1);
+        hpf_x1 = tmp;
+		s = signed_saturate_rshift(hpf_y1, 16, 14);
 		*p++ = s;
-		dc += s / 12000;  // slow response, remove DC component
 	} while (p < end);
-	dc_average = dc;
 
 	// then transmit the AC data
 	transmit(out_left);
 	release(out_left);
 }
-
-
-

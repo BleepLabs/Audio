@@ -27,58 +27,59 @@
 #ifndef mixer_h_
 #define mixer_h_
 
+#include "Arduino.h"
 #include "AudioStream.h"
 
 class AudioMixer4 : public AudioStream
 {
 #if defined(KINETISK)
 public:
-        AudioMixer4(void) : AudioStream(4, inputQueueArray) {
+	AudioMixer4(void) : AudioStream(4, inputQueueArray) {
 		for (int i=0; i<4; i++) multiplier[i] = 65536;
 	}
-        virtual void update(void);
+	virtual void update(void);
 	void gain(unsigned int channel, float gain) {
 		if (channel >= 4) return;
 		if (gain > 32767.0f) gain = 32767.0f;
-		else if (gain < 0.0f) gain = 0.0f;
+		else if (gain < -32767.0f) gain = -32767.0f;
 		multiplier[channel] = gain * 65536.0f; // TODO: proper roundoff?
 	}
-
-	void gain(float gain0,float gain1,float gain2,float gain3) {   //lazy gain
-		gain(0,gain0);
-		gain(1,gain1);
-		gain(2,gain2);
-		gain(3,gain3);
-	}
-	
-		void gain(float gainall) {
-		gain(0,gainall);
-		gain(1,gainall);
-		gain(2,gainall);
-		gain(3,gainall);
-	}
-
-
 private:
 	int32_t multiplier[4];
 	audio_block_t *inputQueueArray[4];
 
 #elif defined(KINETISL)
 public:
-        AudioMixer4(void) : AudioStream(4, inputQueueArray) {
+	AudioMixer4(void) : AudioStream(4, inputQueueArray) {
 		for (int i=0; i<4; i++) multiplier[i] = 256;
 	}
-        virtual void update(void);
+	virtual void update(void);
 	void gain(unsigned int channel, float gain) {
 		if (channel >= 4) return;
 		if (gain > 127.0f) gain = 127.0f;
-		else if (gain < 0.0f) gain = 0.0f;
+		else if (gain < -127.0f) gain = -127.0f;
 		multiplier[channel] = gain * 256.0f; // TODO: proper roundoff?
 	}
 private:
 	int16_t multiplier[4];
 	audio_block_t *inputQueueArray[4];
 #endif
+};
+
+class AudioAmplifier : public AudioStream
+{
+public:
+	AudioAmplifier(void) : AudioStream(1, inputQueueArray), multiplier(65536) {
+	}
+	virtual void update(void);
+	void gain(float n) {
+		if (n > 32767.0f) n = 32767.0f;
+		else if (n < -32767.0f) n = -32767.0f;
+		multiplier = n * 65536.0f;
+	}
+private:
+	int32_t multiplier;
+	audio_block_t *inputQueueArray[1];
 };
 
 #endif

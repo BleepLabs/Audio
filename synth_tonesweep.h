@@ -23,6 +23,7 @@
 #ifndef synth_tonesweep_h_
 #define synth_tonesweep_h_
 
+#include "Arduino.h"
 #include "AudioStream.h"
 
 //                A u d i o S y n t h T o n e S w e e p
@@ -38,6 +39,14 @@ public:
   boolean play(float t_amp,int t_lo,int t_hi,float t_time);
   virtual void update(void);
   unsigned char isPlaying(void);
+  float read(void) {
+    __disable_irq();
+    uint64_t freq = tone_freq;
+    unsigned char busy = sweep_busy;
+    __enable_irq();
+    if (!busy) return 0.0f;
+    return (float)(freq >> 32);
+  }
 
 private:
   short tone_amp;

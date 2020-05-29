@@ -22,39 +22,50 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
- 
-    Interpolated delay time gives delay effect with a tape like response. 
+
+    Interpolated delay time gives delay effect with a tape like response.
     Control of this interpolation speed and delay sample rate is now possible
- 
+
  */
 
 #include "AudioStream.h"
+#include "Arduino.h"
 
-class AudioEffectTapeDelay : 
-public AudioStream
+class AudioEffectTapeDelay :
+  public AudioStream
 {
 public:
-  AudioEffectTapeDelay(void): 
-  AudioStream(1,inputQueueArray) { 
+  AudioEffectTapeDelay(void):
+    AudioStream(1, inputQueueArray) {
   }
 
-  void begin(short *delayline,int max_len,int dly_len, short redux, short lerp);
-  int16_t length(int dly_len);
+  void begin(short *delayline, uint32_t max_len, uint32_t dly_len, short redux, short lerp);
+  uint32_t length(uint32_t dly_len);
+    uint32_t length_no_lerp(uint32_t dly_len);
+
+    void sampleRate(short redux);
+
+
   virtual void update(void);
-  
+
+
 private:
-    uint32_t dlyd,dlyt;    
+  uint32_t dlyd, dlyt;
 
   audio_block_t *inputQueueArray[1];
   short *l_delayline;
-  int delay_length,desired_delay_length;
-  int16_t max_dly_len;
-  short write_head;
-  int delay_depth;
-  int rate_redux;
-  int delay_offset_idx;
-  int   delay_rate_incr;
-  int read_head,feedback;
-  short SIMPLE_SMOOTH,lerp_len;
-  unsigned int l_delay_rate_index;
+  uint32_t delay_length, desired_delay_length;
+  int32_t inv_delay_length;
+  uint32_t max_dly_len;
+  uint32_t write_head;
+  uint32_t delay_depth;
+  uint32_t rate_redux;
+  uint32_t delay_offset_idx;
+  uint32_t   delay_rate_incr;
+  uint32_t read_head, feedback;
+  short SIMPLE_SMOOTH, lerp_len;
+  uint32_t l_delay_rate_index;
+
+  short sync_out_latch;
+  short sync_out_count;
 };

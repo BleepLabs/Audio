@@ -24,6 +24,7 @@
  * THE SOFTWARE.
  */
 
+#include <Arduino.h>
 #include "control_wm8731.h"
 #include "Wire.h"
 
@@ -96,7 +97,29 @@ bool AudioControlWM8731::volumeInteger(unsigned int n)
 	return true;
 }
 
+bool AudioControlWM8731::inputLevel(float n)
+{
+	// range is 0x00 (min) - 0x1F (max)
 
+	int _level = int(n * 31.f); 
+
+	_level = _level > 0x1F ? 0x1F : _level;
+	write(WM8731_REG_LLINEIN, _level);
+	write(WM8731_REG_RLINEIN, _level);
+	return true;
+}
+
+bool AudioControlWM8731::inputSelect(int n)
+{
+	if (n == AUDIO_INPUT_LINEIN) {
+		write(WM8731_REG_ANALOG, 0x12);
+	} else if (n == AUDIO_INPUT_MIC) {
+		write(WM8731_REG_ANALOG, 0x15);
+	} else {
+		return false;
+	}
+	return true;
+}
 
 /******************************************************************/
 

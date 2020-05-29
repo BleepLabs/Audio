@@ -24,6 +24,7 @@
  * THE SOFTWARE.
  */
 
+#include <Arduino.h>
 #include "play_memory.h"
 #include "utility/dspinst.h"
 
@@ -78,7 +79,7 @@ void AudioPlayMemory::update(void)
 			*out++ = ulaw_decode_table[(tmp32 >> 16) & 255];
 			*out++ = ulaw_decode_table[(tmp32 >> 24) & 255];
 		}
-		consumed = 128;
+		consumed = AUDIO_BLOCK_SAMPLES;
 		break;
 
 	  case 0x81: // 16 bit PCM, 44100 Hz
@@ -87,7 +88,7 @@ void AudioPlayMemory::update(void)
 			*out++ = (int16_t)(tmp32 & 65535);
 			*out++ = (int16_t)(tmp32 >> 16);
 		}
-		consumed = 128;
+		consumed = AUDIO_BLOCK_SAMPLES;
 		break;
 
 	  case 0x02: // u-law encoded, 22050 Hz 
@@ -107,7 +108,7 @@ void AudioPlayMemory::update(void)
 			*out++ = s4;
 			s0 = s4;
 		}
-		consumed = 64;
+		consumed = AUDIO_BLOCK_SAMPLES/2;
 		break;
 
 	  case 0x82: // 16 bits PCM, 22050 Hz
@@ -121,7 +122,7 @@ void AudioPlayMemory::update(void)
 			*out++ = s2;
 			s0 = s2;
 		}
-		consumed = 64;
+		consumed = AUDIO_BLOCK_SAMPLES/2;
 		break;
 
 	  case 0x03: // u-law encoded, 11025 Hz
@@ -149,7 +150,7 @@ void AudioPlayMemory::update(void)
 			*out++ = s4;
 			s0 = s4;
 		}
-		consumed = 32;
+		consumed = AUDIO_BLOCK_SAMPLES/4;
 		break;
 
 	  case 0x83: // 16 bit PCM, 11025 Hz
@@ -167,7 +168,7 @@ void AudioPlayMemory::update(void)
 			*out++ = s2;
 			s0 = s2;
 		}
-		consumed = 32;
+		consumed = AUDIO_BLOCK_SAMPLES/4;
 		break;
 
 	  default:
