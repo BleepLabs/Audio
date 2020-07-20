@@ -1,5 +1,5 @@
 /* Audio Library for Teensy 3.X
- * Copyright (c) 2014, Paul Stoffregen, paul@pjrc.com
+ * Copyright (c) 2019, Paul Stoffregen, paul@pjrc.com
  *
  * Development of this audio library was funded by PJRC.COM, LLC by sales of
  * Teensy and Audio Adaptor boards.  Please support PJRC's efforts to develop
@@ -23,52 +23,34 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#if !defined(__IMXRT1052__) && !defined(__IMXRT1062__)
-#ifndef pdb_h_
-#define pdb_h_
+/*
+ (c) Frank B
+*/
 
-#include "kinetis.h"
+#if defined(__IMXRT1052__) || defined(__IMXRT1062__)
+#include "imxrt_hw.h"
 
-// Multiple input & output objects use the Programmable Delay Block
-// to set their sample rate.  They must all configure the same
-// period to avoid chaos.
+FLASHMEM
+void set_audioClock(int nfact, int32_t nmult, uint32_t ndiv, bool force) // sets PLL4
+{
+	if (!force && (CCM_ANALOG_PLL_AUDIO & CCM_ANALOG_PLL_AUDIO_ENABLE)) return;
 
-#define PDB_CONFIG (PDB_SC_TRGSEL(15) | PDB_SC_PDBEN | PDB_SC_CONT | PDB_SC_PDBIE | PDB_SC_DMAEN)
+	CCM_ANALOG_PLL_AUDIO = CCM_ANALOG_PLL_AUDIO_BYPASS | CCM_ANALOG_PLL_AUDIO_ENABLE
+			     | CCM_ANALOG_PLL_AUDIO_POST_DIV_SELECT(2) // 2: 1/4; 1: 1/2; 0: 1/1
+			     | CCM_ANALOG_PLL_AUDIO_DIV_SELECT(nfact);
 
+	CCM_ANALOG_PLL_AUDIO_NUM   = nmult & CCM_ANALOG_PLL_AUDIO_NUM_MASK;
+	CCM_ANALOG_PLL_AUDIO_DENOM = ndiv & CCM_ANALOG_PLL_AUDIO_DENOM_MASK;
+	
+	CCM_ANALOG_PLL_AUDIO &= ~CCM_ANALOG_PLL_AUDIO_POWERDOWN;//Switch on PLL
+	while (!(CCM_ANALOG_PLL_AUDIO & CCM_ANALOG_PLL_AUDIO_LOCK)) {}; //Wait for pll-lock
+	
+	const int div_post_pll = 1; // other values: 2,4
+	CCM_ANALOG_MISC2 &= ~(CCM_ANALOG_MISC2_DIV_MSB | CCM_ANALOG_MISC2_DIV_LSB);
+	if(div_post_pll>1) CCM_ANALOG_MISC2 |= CCM_ANALOG_MISC2_DIV_LSB;
+	if(div_post_pll>3) CCM_ANALOG_MISC2 |= CCM_ANALOG_MISC2_DIV_MSB;
+	
+	CCM_ANALOG_PLL_AUDIO &= ~CCM_ANALOG_PLL_AUDIO_BYPASS;//Disable Bypass
+}
 
-#if F_BUS == 120000000
-  #define PDB_PERIOD (2720-1)
-#elif F_BUS == 108000000
-  #define PDB_PERIOD (2448-1)
-#elif F_BUS == 96000000
-  #define PDB_PERIOD (2176-1)
-#elif F_BUS == 90000000
-  #define PDB_PERIOD (2040-1)
-#elif F_BUS == 80000000
-  #define PDB_PERIOD (1813-1)  // small ?? error
-#elif F_BUS == 72000000
-  #define PDB_PERIOD (1632-1)
-#elif F_BUS == 64000000
-  #define PDB_PERIOD (1451-1)  // small ?? error
-#elif F_BUS == 60000000
-  #define PDB_PERIOD (1360-1)
-#elif F_BUS == 56000000
-  #define PDB_PERIOD (1269-1)  // 0.026% error
-#elif F_BUS == 54000000
-  #define PDB_PERIOD (1224-1)
-#elif F_BUS == 48000000
-  #define PDB_PERIOD (1088-1)
-#elif F_BUS == 40000000
-  #define PDB_PERIOD (907-1)  // small ?? error
-#elif F_BUS == 36000000
-  #define PDB_PERIOD (816-1)
-#elif F_BUS == 24000000
-  #define PDB_PERIOD (544-1)
-#elif F_BUS == 16000000
-  #define PDB_PERIOD (363-1)  // 0.092% error
-#else
-  #error "Unsupported F_BUS speed"
-#endif
-
-#endif
 #endif

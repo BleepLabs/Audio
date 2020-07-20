@@ -1,5 +1,5 @@
 /* Audio Library for Teensy 3.X
- * Copyright (c) 2014, Paul Stoffregen, paul@pjrc.com
+ * Copyright (c) 2019, Paul Stoffregen, paul@pjrc.com
  *
  * Development of this audio library was funded by PJRC.COM, LLC by sales of
  * Teensy and Audio Adaptor boards.  Please support PJRC's efforts to develop
@@ -23,52 +23,26 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#if !defined(__IMXRT1052__) && !defined(__IMXRT1062__)
-#ifndef pdb_h_
-#define pdb_h_
+/*
+ (c) Frank B
+*/
 
-#include "kinetis.h"
+#if defined(__IMXRT1062__)
 
-// Multiple input & output objects use the Programmable Delay Block
-// to set their sample rate.  They must all configure the same
-// period to avoid chaos.
+#ifndef imxr_hw_h_
+#define imxr_hw_h_
 
-#define PDB_CONFIG (PDB_SC_TRGSEL(15) | PDB_SC_PDBEN | PDB_SC_CONT | PDB_SC_PDBIE | PDB_SC_DMAEN)
+#define IMXRT_CACHE_ENABLED 2 // 0=disabled, 1=WT, 2= WB
 
+#include <Arduino.h>
+#include <imxrt.h>
 
-#if F_BUS == 120000000
-  #define PDB_PERIOD (2720-1)
-#elif F_BUS == 108000000
-  #define PDB_PERIOD (2448-1)
-#elif F_BUS == 96000000
-  #define PDB_PERIOD (2176-1)
-#elif F_BUS == 90000000
-  #define PDB_PERIOD (2040-1)
-#elif F_BUS == 80000000
-  #define PDB_PERIOD (1813-1)  // small ?? error
-#elif F_BUS == 72000000
-  #define PDB_PERIOD (1632-1)
-#elif F_BUS == 64000000
-  #define PDB_PERIOD (1451-1)  // small ?? error
-#elif F_BUS == 60000000
-  #define PDB_PERIOD (1360-1)
-#elif F_BUS == 56000000
-  #define PDB_PERIOD (1269-1)  // 0.026% error
-#elif F_BUS == 54000000
-  #define PDB_PERIOD (1224-1)
-#elif F_BUS == 48000000
-  #define PDB_PERIOD (1088-1)
-#elif F_BUS == 40000000
-  #define PDB_PERIOD (907-1)  // small ?? error
-#elif F_BUS == 36000000
-  #define PDB_PERIOD (816-1)
-#elif F_BUS == 24000000
-  #define PDB_PERIOD (544-1)
-#elif F_BUS == 16000000
-  #define PDB_PERIOD (363-1)  // 0.092% error
+void set_audioClock(int nfact, int32_t nmult, uint32_t ndiv,  bool force = false); // sets PLL4
+
+#endif
+
 #else
-  #error "Unsupported F_BUS speed"
+//No IMXRT
+#define IMXRT_CACHE_ENABLED 0
 #endif
-
-#endif
-#endif
+	
