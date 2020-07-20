@@ -28,7 +28,7 @@ public:
 
 
       if (rr_amt>0){
-        float a3t = pow(rr_amt, 2);
+        float a3t = rr_amt * rr_amt ; //pow doesn't work here?
         rate_reduction_amt =rr_amt* (65536.0f);
         //rate_reduction_amt =rr_amt* (65536.0f);
 

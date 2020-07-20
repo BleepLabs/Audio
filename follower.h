@@ -47,8 +47,9 @@ public:
 		return output;
 	}
 
-	int32_t amplitude(float amp) {
+	void amplitude(float amp) {
 		amp_div=amp*256;
+
 	}
 
 	int32_t aveo() {
